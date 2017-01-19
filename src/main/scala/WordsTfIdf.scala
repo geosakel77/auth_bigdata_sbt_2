@@ -14,13 +14,13 @@ import org.apache.spark.ml.classification.LogisticRegression
 object WordsTfIdf {
 
 
-  def tfidf(spark: SparkSession,inputFile:String,splitRate:Array[Double]): Array[Dataset[Row]] ={
-    val trainData = spark.sparkContext.textFile(inputFile, 2).map(line => (line.split(",")(0), line.split(",")(1).toDouble))
+  def tfidf(spark: SparkSession,inputFile:String,splitRate:Array[Double],numFeatures:Int=3000): Array[Dataset[Row]] ={
+    val trainData = spark.sparkContext.textFile(inputFile, 2).map(line => (line.split(",")(0).replace("\"",""), line.split(",")(1).toDouble))
     val dfdata = spark.createDataFrame(trainData).toDF("comments", "label")
     val tokenizer = new Tokenizer().setInputCol("comments").setOutputCol("words")
     val wordsData = tokenizer.transform(dfdata)
     //----------------------Simple Tf IDF----------------------------------------------
-    val hashingTF = new HashingTF().setInputCol("words").setOutputCol("rawFeatures")
+    val hashingTF = new HashingTF().setInputCol("words").setOutputCol("rawFeatures").setNumFeatures(numFeatures)
     val feautirizedData = hashingTF.transform(wordsData)
     val idf = new IDF().setInputCol("rawFeatures").setOutputCol("features")
     val idfModel = idf.fit(feautirizedData)
@@ -28,8 +28,10 @@ object WordsTfIdf {
     rescaledData.randomSplit(splitRate)
   }
 
+
+
   def ngramtf(spark: SparkSession,inputFile:String,splitRate:Array[Double],nValue:Int=2): Array[Dataset[Row]] ={
-    val trainData = spark.sparkContext.textFile(inputFile, 2).map(line => (line.split(",")(0), line.split(",")(1).toDouble))
+    val trainData = spark.sparkContext.textFile(inputFile, 2).map(line => (line.split(",")(0).replace("\"",""), line.split(",")(1).toDouble))
     val dfdata = spark.createDataFrame(trainData).toDF("comments", "label")
     val tokenizer = new Tokenizer().setInputCol("comments").setOutputCol("words")
     val wordsData = tokenizer.transform(dfdata)
@@ -42,7 +44,7 @@ object WordsTfIdf {
   }
 
   def words2Vec(spark: SparkSession,inputFile:String,splitRate:Array[Double],vectorsize:Int=100,minCount:Int=0): Array[Dataset[Row]]={
-    val trainData = spark.sparkContext.textFile(inputFile, 2).map(line => (line.split(",")(0), line.split(",")(1).toDouble))
+    val trainData = spark.sparkContext.textFile(inputFile, 2).map(line => (line.split(",")(0).replace("\"",""), line.split(",")(1).toDouble))
     val dfdata = spark.createDataFrame(trainData).toDF("comments", "label")
     val tokenizer = new Tokenizer().setInputCol("comments").setOutputCol("words")
     //----------------------Word2Vec -------------------------------------------------------
@@ -66,12 +68,13 @@ object WordsTfIdf {
         val inputFile = "file://" + currentDir + "/"+csvfilename
         println(inputFile)
         // Data in TFIDF
-        //val Array(trainData,testData) = tfidf(spark,inputFile,Array(0.6,0.4))
+        val Array(trainData,testData) = tfidf(spark,inputFile,Array(0.7,0.3))
+
         // Data Ngram TF
         //val Array(trainData,testData) = ngramtf(spark,inputFile,Array(0.7,0.3))
         // Word2vector
-        val Array(trainData,testData) = words2Vec(spark,inputFile,Array(0.7,0.3))
-        /*
+        //val Array(trainData,testData) = words2Vec(spark,inputFile,Array(0.7,0.3))
+
         //-----------------------First Attempt ML- TFIDF/NGRAM------------------------------------------------------------
         // Train a NaiveBayes model.
         val model = new NaiveBayes().fit(trainData)
@@ -88,7 +91,7 @@ object WordsTfIdf {
         val accuracy = evaluator.evaluate(predictions)
         println("Accuracy: " + accuracy)
         //-----------------------First Attempt ML------------------------------------------------------------
-        */
+        /*
         //-----------------------Second Attempt ML - Word2Vec------------------------------------------------------------
         // Train a NaiveBayes model.
         val layers = Array[Int](4, 5, 4, 3)
@@ -110,7 +113,7 @@ object WordsTfIdf {
         val accuracy = evaluator.evaluate(predictions)
         println("Accuracy: " + accuracy)
         //-----------------------Second Attempt ML------------------------------------------------------------
-
+        */
       } else {
         println("scala WordsTfIdf.scala csv_file_name")
       }
