@@ -49,17 +49,19 @@ object WordsTFIDFRDD {
         model.clearThreshold()
 
         // Compute raw scores on the test set.
-        val scoreAndLabels = testData.map { point =>
-          val score = model.predict(point.features)
-          (score, point.label)
+        val predictionAndLabels = testData.map { point =>
+          val prediction = model.predict(point.features)
+          (prediction, point.label)
         }
 
         // Get evaluation metrics.
-        val metrics = new BinaryClassificationMetrics(scoreAndLabels)
+        val metrics = new BinaryClassificationMetrics(predictionAndLabels)
         val auROC = metrics.areaUnderROC()
         val fmeasure = metrics.fMeasureByThreshold()
         println("Area under ROC = " + auROC)
-        println("F-measure = " + fmeasure)
+        println("F-measure: ")
+        fmeasure.foreach(f=>println("A:"+f._1+" B:"+f._2))
+
       } else {
         println("scala WordsTfIdf.scala csv_file_name")
       }
