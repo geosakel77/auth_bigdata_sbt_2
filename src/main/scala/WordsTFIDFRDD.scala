@@ -9,7 +9,8 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.feature.IDF
 import org.apache.spark.mllib.feature.Normalizer
 import org.apache.spark.rdd.RDD
-
+import org.apache.spark.mllib.classification.SVMWithSGD
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 object WordsTFIDFRDD {
 
   def tfidfrdd(sc: SparkContext,inputFile:String,splitRate:Array[Double],norm:Boolean=true): Array[RDD[LabeledPoint]] = {
@@ -28,14 +29,6 @@ object WordsTFIDFRDD {
     labeledVectors
   }
 
-  def words2vecrdd():Unit={
-
-
-
-
-  }
-
-
   def main(args: Array[String]): Unit = {
     var csvfilename: String = ""
     if (args.length != 0) {
@@ -48,9 +41,25 @@ object WordsTFIDFRDD {
         println(currentDir)
         val inputFile = "file://" + currentDir + "/" + csvfilename
         println(inputFile)
-        val Array(trainData,testData)=this.tfidfrdd(sc,inputFile,Array(0.6,0.4))
-        trainData.foreach(f=>println(f.label+":"+f.features))
+        val Array(trainData,testData)=this.tfidfrdd(sc,inputFile,Array(0.7,0.3))
 
+        //Example ML 1
+        val model = new SVMWithSGD().run(trainData)
+
+        model.clearThreshold()
+
+        // Compute raw scores on the test set.
+        val scoreAndLabels = testData.map { point =>
+          val score = model.predict(point.features)
+          (score, point.label)
+        }
+
+        // Get evaluation metrics.
+        val metrics = new BinaryClassificationMetrics(scoreAndLabels)
+        val auROC = metrics.areaUnderROC()
+        val fmeasure = metrics.fMeasureByThreshold()
+        println("Area under ROC = " + auROC)
+        println("F-measure = " + fmeasure)
       } else {
         println("scala WordsTfIdf.scala csv_file_name")
       }
